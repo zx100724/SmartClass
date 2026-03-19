@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',# 核心 API 框架）
     'corsheaders', # 解决跨域问题（前端访问后端必备）
     'class_back',
+    'monitor',
+    'records',
 ]
 
 MIDDLEWARE = [
@@ -133,7 +135,7 @@ TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -146,6 +148,12 @@ STATICFILES_DIRS = [
 ]
 
 SIMPLEUI_LOGO = '/static/img/logo.png'
+
+
+# 媒体文件的访问 URL
+MEDIA_URL = '/media/'
+# 媒体文件的物理存储路径
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
