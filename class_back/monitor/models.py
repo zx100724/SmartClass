@@ -1,12 +1,10 @@
 from django.db import models
 
-# 1. 班级类 (上课的主体)
 class StudentClass(models.Model):
     major = models.CharField(max_length=100, verbose_name="专业")
     grade = models.IntegerField(verbose_name="年级")
     class_number = models.CharField(max_length=20, verbose_name="班级编号")
     
-    # 💡 新增字段：该班级的标准总人数
     total_students = models.IntegerField(default=45, verbose_name="班级总人数")
 
     def __str__(self):
@@ -16,7 +14,6 @@ class StudentClass(models.Model):
         verbose_name = "班级管理"
         verbose_name_plural = verbose_name
 
-# 2. 教室类 (物理空间)
 class Classroom(models.Model):
     name = models.CharField(max_length=50, verbose_name="教室名称", help_text="如：201")
     building = models.CharField(max_length=50, verbose_name="教学楼", help_text="如：明德楼")
@@ -28,7 +25,6 @@ class Classroom(models.Model):
         verbose_name = "教室管理"
         verbose_name_plural = verbose_name
 
-# 3. 摄像头素材类 (素材引用)
 class Camera(models.Model):
 
     classroom = models.OneToOneField(
@@ -40,14 +36,12 @@ class Camera(models.Model):
     )
     device_id = models.CharField(max_length=100, unique=True, verbose_name="设备ID")
     
-    # 使用 ImageField，Django 会自动校验是否为图片
     mock_image = models.ImageField(
         upload_to='mock/images/', 
         null=True, blank=True, 
         verbose_name="模拟图片素材"
     )
     
-    # 使用 FileField，用于上传视频
     mock_video = models.FileField(
         upload_to='mock/videos/', 
         null=True, blank=True, 
@@ -62,7 +56,6 @@ class Camera(models.Model):
         verbose_name = "监控管理"
         verbose_name_plural = "监控管理"
 
-# 4. 课程类 (连接教室、班级和时间)
 class Course(models.Model):
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name='courses', verbose_name="所属教室")
     student_classes = models.ManyToManyField(StudentClass, related_name='courses', verbose_name="上课班级")
@@ -78,25 +71,20 @@ class Course(models.Model):
         verbose_name = "课程排课"
         verbose_name_plural = verbose_name
 
-# monitor/models.py
 
 class InspectionRecord(models.Model):
-    # 关联教室
     classroom = models.ForeignKey('Classroom', on_delete=models.CASCADE, verbose_name="教室")
     course_name = models.CharField(max_length=100, verbose_name="课程名称")
     teacher_name = models.CharField(max_length=50, verbose_name="任课教师")
     
-    # 巡课数据
     inspector = models.CharField(max_length=50, default="管理员", verbose_name="巡课员")
     attendance_count = models.IntegerField(verbose_name="实到人数")
     focus_rate = models.IntegerField(verbose_name="专注度(%)")
     
-    # 评价内容
     rating = models.IntegerField(default=5, verbose_name="评分(1-5)")
     tags = models.CharField(max_length=200, blank=True, verbose_name="快捷标签")
     comment = models.TextField(blank=True, verbose_name="详细评语")
     
-    # 时间戳
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="记录时间")
 
     class Meta:

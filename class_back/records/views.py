@@ -5,31 +5,30 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-# 💡 核心模型引入：确保你的 models.py 中确实叫这个名字
+
 from .models import InspectionTask
 
-# ================= 1. 提交巡课记录 (实时巡课保存) =================
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def handle_inspection(request):
     data = request.data
     try:
-        # 💡 创建记录并自动关联当前登录用户（巡课员）
+
         task = InspectionTask.objects.create(
             inspector=request.user,
             
-            # 兼容不同字段名：同时赋值 room_id 和 classroom_id
+
             room_id=data.get('room_id'),
             classroom_id=data.get('room_id'),
             
             course_name=data.get('course_name', '未知课程'),
             teacher_name=data.get('teacher_name', '未知教师'),
             
-            # AI 分析数据对接
+
             ai_attendance=data.get('attendance_count', 0), 
             ai_focus_rate=data.get('focus_rate', 0),
-            
-            # 评价数据
+
             score=data.get('rating', 5),
             tags=data.get('tags', ''),
             comment=data.get('comment', '')
@@ -41,25 +40,24 @@ def handle_inspection(request):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# ================= 2. 看板数据统计 (Home/Dashboard) =================
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_dashboard_stats(request):
     today = timezone.now().date()
-    # 💡 统一使用 InspectionTask 进行统计
+
     today_records = InspectionTask.objects.filter(created_at__date=today)
     
-    # 指标计算
+
     today_count = today_records.count()
     avg_focus = today_records.aggregate(Avg('ai_focus_rate'))['ai_focus_rate__avg'] or 0
     total_student = today_records.aggregate(Sum('ai_attendance'))['ai_attendance__sum'] or 0
 
-    # 饼图：评分分布 (1-5分)
+
     score_stats = today_records.values('score').annotate(value=Count('id'))
     score_mapping = {5: '优秀', 4: '良好', 3: '一般', 2: '较差', 1: '极差'}
     pie_data = [{"value": s['value'], "name": score_mapping.get(s['score'], '未知')} for s in score_stats]
 
-    # 折线图：时段波动 (08:00 - 18:00)
+
     line_data = []
     time_labels = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
     for label in time_labels:
@@ -78,10 +76,10 @@ def get_dashboard_stats(request):
     })
 
 
-# ================= 3. 历史记录查询 (支持极简搜索) =================
+
 from rest_framework import status
 from django.db.models import Q
-from .models import InspectionTask # 确保导入了模型
+from .models import InspectionTask 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -92,8 +90,7 @@ def get_history_records(request):
         group = user.groups.first()
         group_name = group.name if group else "游客"
 
-        # 1. 基础权限过滤 + select_related 优化性能
-        # 💡 使用 select_related('inspector') 一次性查出用户信息，避免循环中重复查表
+
         base_queryset = InspectionTask.objects.select_related('inspector').all().order_by('-id')
 
         if group_name == "管理员":
@@ -119,7 +116,7 @@ def get_history_records(request):
         for r in queryset:
             inspector = r.inspector
             
-            # 💡 拼接逻辑：中文习惯通常是 Last (姓) + First (名)
+
             if inspector:
                 last_name = inspector.last_name or ""
                 first_name = inspector.first_name or ""

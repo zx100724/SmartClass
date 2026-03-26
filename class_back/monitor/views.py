@@ -88,21 +88,18 @@ from .models import Classroom
 # ==========================================
 try:
     from ultralytics import YOLO
-    # 假设 best.pt 放在项目根目录 (manage.py 同级)
     MODEL_PATH = os.path.join(settings.BASE_DIR, 'best.pt')
     if os.path.exists(MODEL_PATH):
         yolo_model = YOLO(MODEL_PATH)
-        print("✅ YOLO模型加载成功！")
+        print("YOLO模型加载成功！")
     else:
         yolo_model = None
-        print("⚠️ 未找到 best.pt，AI接口将返回模拟数据")
+        print("未找到 best.pt，AI接口将返回模拟数据")
 except ImportError:
     yolo_model = None
-    print("⚠️ 未安装 ultralytics，请运行 pip install ultralytics")
+    print("未安装 ultralytics，请运行 pip install ultralytics")
 
-# ==========================================
-# 💡 2. AI 分析专属接口
-# ==========================================
+
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny]) 
@@ -117,22 +114,20 @@ def analyze_classroom(request, room_id):
         if not camera or not camera.mock_image:
             return Response({"error": "该教室暂无画面可供分析"}, status=400)
 
-        # 获取图片的绝对物理路径
+
         image_path = camera.mock_image.path
         
-        # 定义类别映射字典 (根据你的训练日志)
+
         class_names = {
             0: 'Writing', 1: 'Reading', 2: 'Listening', 
             3: 'Turning around', 4: 'Raising hand', 
             5: 'Standing', 6: 'Discussing', 7: 'Guiding'
         }
         
-        # 初始化统计数据
+
         action_counts = {name: 0 for name in class_names.values()}
 
-        # -------------------------------------
-        # 🧠 执行 YOLO 推理
-        # -------------------------------------
+
         if yolo_model and os.path.exists(image_path):
             results = yolo_model.predict(source=image_path, conf=0.5, save=False) # conf=0.5 表示置信度阈值
             
@@ -145,34 +140,30 @@ def analyze_classroom(request, room_id):
                     if action_name in action_counts:
                         action_counts[action_name] += 1
         else:
-            # 如果没模型，随便造点假数据防止前端崩溃
+
             action_counts = {'Listening': 20, 'Reading': 15, 'Writing': 5, 'Turning around': 2}
 
-        # -------------------------------------
-        # 📊 业务逻辑转换 (将 YOLO 数据转为前端指标)
-        # -------------------------------------
-        # 1. 计算学生总数 (排除 Guiding，因为那是老师)
+
         student_actions = ['Writing', 'Reading', 'Listening', 'Turning around', 'Raising hand', 'Standing', 'Discussing']
         total_students = sum(action_counts[action] for action in student_actions)
         if total_students == 0: total_students = 1 # 防除零报错
 
-        # 2. 计算专注度指数 (听课+读+写+讨论 视为专注)
+
         focus_count = action_counts['Listening'] + action_counts['Reading'] + action_counts['Writing'] + action_counts['Discussing']
         focus_rate = round((focus_count / total_students) * 100)
 
-        # 3. 评定专注度等级
         if focus_rate >= 85: focus_level = "优秀"
         elif focus_rate >= 70: focus_level = "良好"
         elif focus_rate >= 60: focus_level = "中等"
         else: focus_level = "较差"
 
-        # 4. 组装异常警告数据 (把你模型里的 Turning around 算作异常)
+
         warnings = []
         if action_counts['Turning around'] > 0:
             warnings.append({"icon": "🔄", "type": "交头接耳/转身", "count": action_counts['Turning around']})
-        # 如果模型以后加了睡觉检测，可以继续在这里 append
 
-        # 组装返回给 Vue 的 JSON
+
+
         response_data = {
             "room_id": room.id,
             "total_students": total_students,
@@ -207,23 +198,23 @@ def facial_attendance_snapshot(request, room_id):
             end_time__gte=timezone.now()
         ).first()
 
-        # 2. 动态计算“应到人数”
+
         total_count = 0
         if current_course:
-            # 汇总这堂课所有上课班级的人数之和
+
             for stu_class in current_course.student_classes.all():
                 total_count += stu_class.total_students
         else:
             total_count = 45 # 如果没课，给个默认参考值
 
-        # 3. 执行 YOLO 真实计数
+
         actual_count = 0
         if yolo_model and camera and camera.mock_image:
             results = yolo_model.predict(source=camera.mock_image.path, conf=0.3, save=False)
             for result in results:
                 actual_count += len(result.boxes)
         
-        # 4. 计算结果
+
         attendance_rate = round((actual_count / total_count) * 100) if total_count > 0 else 0
 
         return Response({
@@ -250,7 +241,7 @@ def inspection_records(request):
     if request.method == 'POST':
         try:
             data = request.data
-            # 💡 核心：将前端传来的 AI 数据和评价存入数据库
+
             InspectionRecord.objects.create(
                 classroom_id=data['room_id'],
                 course_name=data['course_name'],
@@ -266,7 +257,7 @@ def inspection_records(request):
         except Exception as e:
             return Response({"error": f"保存失败: {str(e)}"}, status=400)
     
-    # GET 请求：返回所有历史记录给前端表格
+
     else:
         records = InspectionRecord.objects.all().order_by('-created_at')
         results = []

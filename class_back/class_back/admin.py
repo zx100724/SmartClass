@@ -6,7 +6,7 @@ admin.site.site_header = "智慧课堂巡课系统管理后台"
 admin.site.site_title = "智慧课堂巡课系统管理后台"           
 
 
-# 1. 必须先注销系统默认的 User 注册
+
 try:
     admin.site.unregister(User)
 except admin.sites.NotRegistered:
@@ -22,6 +22,6 @@ class MyUserAdmin(UserAdmin):
         groups = [g.name for g in obj.groups.all()]
         return " | ".join(groups) if groups else "暂无分组"
 
-    # --- 关键代码：告诉 Django 按哪个数据库字段排序 ---
+
     get_groups.admin_order_field = 'groups__name' 
     get_groups.short_description = '所属组'
