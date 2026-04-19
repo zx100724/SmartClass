@@ -65,7 +65,7 @@ onMounted(async () => {
   }
 
   try {
-    const res = await axios.get('http://192.168.2.130:8000/api/user-info/', {
+    const res = await axios.get('http://192.168.226.117:8000/api/user-info/', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     
