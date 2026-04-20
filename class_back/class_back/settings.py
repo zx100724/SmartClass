@@ -149,6 +149,14 @@ STATICFILES_DIRS = [
 
 SIMPLEUI_LOGO = '/static/img/logo.png'
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
+
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
 
 # 媒体文件的访问 URL
 MEDIA_URL = '/media/'

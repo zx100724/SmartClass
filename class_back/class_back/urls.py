@@ -1,6 +1,8 @@
+import os
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.views.generic.base import RedirectView
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView
 from . import views
@@ -11,6 +13,7 @@ from class_back import views as class_back_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('favicon.ico', RedirectView.as_view(url=os.path.join(settings.STATIC_URL, 'favicon.ico'))),
     
     path('api/register/', class_back_views.register, name='register'),
     path('api/login/', TokenObtainPairView.as_view(), name='login'),
