@@ -19,43 +19,43 @@
     </div>
 
     <div class="video-grid" v-if="onlineClassrooms.length > 0">
-<div class="video-card" v-for="room in onlineClassrooms" :key="room.id" @click="openRoomDetail(room)">
-  <div class="card-header">
-    <span class="room-name">{{ room.room_name || room.name }}</span>
-    <span :class="['status-dot', (room.status || room.camera?.status) ? 'online' : 'offline']">
-      {{ (room.status || room.camera?.status) ? '● 设备在线' : '● 设备离线' }}
-    </span>
-  </div>
+      <div class="video-card" v-for="room in onlineClassrooms" :key="room.id" @click="openRoomDetail(room)">
+        <div class="card-header">
+          <span class="room-name">{{ room.room_name || room.name }}</span>
+          <span :class="['status-dot', (room.status || room.camera?.status) ? 'online' : 'offline']">
+            {{ (room.status || room.camera?.status) ? '● 设备在线' : '● 设备离线' }}
+          </span>
+        </div>
 
-  <div class="card-body">
-    <template v-if="room.status || room.camera?.status">
-      <video v-if="getVideoUrl(room)" :src="getVideoUrl(room)" autoplay loop muted class="mock-media"></video>
-      <img v-else-if="getImageUrl(room)" :src="getImageUrl(room)" class="mock-media" alt="监控画面" />
-      <div v-else class="no-signal">无信号</div>
-    </template>
-    <template v-else>
-      <div class="no-signal offline-overlay">
-        <span class="offline-icon">🔌</span>
-        <span>设备已离线</span>
+        <div class="card-body">
+          <template v-if="room.status || room.camera?.status">
+            <video v-if="getVideoUrl(room)" :src="getVideoUrl(room)" autoplay loop muted class="mock-media"></video>
+            <img v-else-if="getImageUrl(room)" :src="getImageUrl(room)" class="mock-media" alt="监控画面" />
+            <div v-else class="no-signal">无信号</div>
+          </template>
+          <template v-else>
+            <div class="no-signal offline-overlay">
+              <span class="offline-icon">🔌</span>
+              <span>设备已离线</span>
+            </div>
+          </template>
+        </div>
+
+        <div class="card-footer" v-if="room.current_course">
+          <div class="course-info">
+            <span class="icon"></span> {{ room.current_course.name }}
+          </div>
+          <div class="teacher-info">
+            <span>{{ room.current_course.teacher }}</span>
+            <span class="v-line">|</span>
+            <span>{{ room.current_course.classes?.join(', ') || '暂无班级' }}</span>
+          </div>
+        </div>
+
+        <div class="card-footer free-time" v-else>
+          <div class="free-info" style="color: #909399;">当前无排课</div>
+        </div>
       </div>
-    </template>
-  </div>
-
-  <div class="card-footer" v-if="room.current_course">
-    <div class="course-info">
-      <span class="icon"></span> {{ room.current_course.name }}
-    </div>
-    <div class="teacher-info">
-      <span>{{ room.current_course.teacher }}</span>
-      <span class="v-line">|</span>
-      <span>{{ room.current_course.classes?.join(', ') || '暂无班级' }}</span>
-    </div>
-  </div>
-
-  <div class="card-footer free-time" v-else>
-    <div class="free-info">系统故障请联系工作人员</div>
-  </div>
-</div>
     </div>
     
     <div v-else class="empty-state">
@@ -100,8 +100,7 @@
             </div>
           </div>
 
-<div class="modal-right">
-            
+          <div class="modal-right">
             <template v-if="selectedRoom.status || selectedRoom.camera?.status">
               <div class="panel-tabs">
                 <div :class="['p-tab', activePanel === 'attendance' ? 'active' : '']" @click="switchPanel('attendance')">考勤</div>
@@ -110,7 +109,6 @@
               </div>
 
               <div class="panel-content">
-                
                 <div v-if="activePanel === 'attendance'" class="panel-item attendance-panel">
                   <h3 class="panel-title">实时考勤计数</h3>
                   
@@ -119,22 +117,22 @@
                     <p>正在抓拍并识别人数...</p>
                   </div>
 
-                  <div v-else-if="attendanceData" class="fade-in">
+                  <div v-else-if="attendanceData && attendanceData.status !== 'off_schedule'" class="fade-in">
                     <div class="attendance-ring">
                       <div class="ring-text">
-                        <span class="rate" :style="{color: getAttendanceColor(attendanceData.ratio)}">{{ attendanceData.ratio }}%</span>
+                        <span class="rate" :style="{color: getAttendanceColor(attendanceData.data.ratio)}">{{ attendanceData.data.ratio }}%</span>
                         <span class="label">到课率</span>
                       </div>
                     </div>
                     <div class="attendance-stats">
-                      <div class="stat"><span class="label">应到</span><span class="val">{{ attendanceData.total }}</span></div>
-                      <div class="stat"><span class="label">实到</span><input type="number" v-model.number="attendanceData.actual" class="edit-input-mini"/></div>
-                      <div class="stat"><span class="label">缺席</span><span class="val red">{{ attendanceData.absent }}</span></div>
+                      <div class="stat"><span class="label">应到</span><span class="val">{{ attendanceData.data.total }}</span></div>
+                      <div class="stat"><span class="label">实到</span><input type="number" v-model.number="attendanceData.data.actual" class="edit-input-mini"/></div>
+                      <div class="stat"><span class="label">缺席</span><span class="val red">{{ attendanceData.data.absent }}</span></div>
                     </div>
                   </div>
 
                   <div v-else class="empty-state-small">
-                    <p>请点击下方按钮开始分析</p>
+                    <p>{{ attendanceData?.status === 'off_schedule' ? '📅 当前非授课时间' : '请点击下方按钮开始分析' }}</p>
                   </div>
 
                   <button class="action-btn" @click="triggerFacialAttendance" :disabled="attendanceLoading">
@@ -230,7 +228,6 @@ const searchQuery = ref('')
 const selectedRoom = ref(null)
 const activePanel = ref('attendance')
 
-// 响应式变量
 const aiData = ref(null)
 const aiLoading = ref(false)
 const attendanceData = ref(null)
@@ -248,11 +245,12 @@ const getHeaders = () => {
 }
 
 const onlineClassrooms = computed(() => {
-  let filtered = roomList.value;
+  // 💡 优化：默认只显示有正在进行课程的教室
+  let filtered = roomList.value.filter(room => room.current_course);
+  
   if (searchQuery.value.trim()) {
     const keyword = searchQuery.value.trim().toLowerCase();
     filtered = filtered.filter(room => {
-      if (!room.current_course) return false;
       const c = room.current_course;
       return (c.name?.toLowerCase().includes(keyword)) || 
              (c.teacher?.toLowerCase().includes(keyword)) || 
@@ -271,23 +269,21 @@ const fetchMonitorData = async () => {
   }
 }
 
-// 考勤计数
 const triggerFacialAttendance = async () => {
   if (!selectedRoom.value) return;
   attendanceLoading.value = true;
   try {
-    const response = await axios.get(`http://localhost:8000/api/monitor/facial-attendance/${selectedRoom.value.id}/`);
-    attendanceData.value = response.data.data;
+    const response = await axios.get(`http://localhost:8000/api/monitor/facial-attendance/${selectedRoom.value.id}/`, { headers: getHeaders() });
+    attendanceData.value = response.data; // 💡 接收包含 status 和 data 的完整对象
   } catch (error) { console.error(error); } 
   finally { attendanceLoading.value = false; }
 }
 
-// AI分析
 const triggerAiAnalysis = async () => {
   if (!selectedRoom.value) return;
   aiLoading.value = true;
   try {
-    const response = await axios.get(`http://localhost:8000/api/monitor/ai-analyze/${selectedRoom.value.id}/`);
+    const response = await axios.get(`http://localhost:8000/api/monitor/ai-analyze/${selectedRoom.value.id}/`, { headers: getHeaders() });
     aiData.value = response.data.data;
   } catch (error) { console.error(error); }
   finally { aiLoading.value = false; }
@@ -311,56 +307,27 @@ const toggleTag = (tag) => {
   const i = evalForm.tags.indexOf(tag);
   i === -1 ? evalForm.tags.push(tag) : evalForm.tags.splice(i, 1);
 }
+
 const submitEvaluation = async () => {
-  if (!selectedRoom.value) {
-    alert("未选择教室，无法提交");
-    return;
-  }
-
-  // 1. 抓取最新复核后的实到人数 (确保是数字类型)
-  // 如果 attendanceData.value 存在，取其 actual 属性；否则默认为 0
-  const finalAttendance = Number(attendanceData.value?.actual) || 0;
-
-  // 2. 构造 payload
+  if (!selectedRoom.value) return;
+  const finalAttendance = Number(attendanceData.value?.data?.actual) || 0;
   const payload = {
     room_id: selectedRoom.value.id,
     course_name: selectedRoom.value.current_course?.name || '未知课程',
     teacher_name: selectedRoom.value.current_course?.teacher || '未知教师',
-    
-    // 💡 关键：这里必须提交你复核后的这个变量
     attendance_count: finalAttendance, 
-    
     focus_rate: Number(aiData.value?.focus_rate) || 0,
     rating: evalForm.rating,
-    tags: evalForm.tags.join(','), // 建议将数组转为字符串，防止后端解析 JSON 数组报错
+    tags: evalForm.tags.join(','),
     comment: evalForm.comment
   };
 
-  // 3. 调试打印：在控制台看看发出去的数据对不对
-  console.log("📤 准备提交的 Payload:", payload);
-
   try {
-    // 💡 确保 getHeaders() 能够返回正确的 Authorization
-    const headers = getHeaders();
-    console.log("🔑 当前请求头:", headers);
-
-    await axios.post('http://localhost:8000/api/records/manage/', payload, {
-      headers: headers
-    });
-    
-    alert('✅ 巡课记录已人工复核并存入系统！');
-    
-    // 提交成功后重置表单
-    evalForm.rating = 5;
-    evalForm.tags = [];
-    evalForm.comment = '';
+    await axios.post('http://localhost:8000/api/records/manage/', payload, { headers: getHeaders() });
+    alert('✅ 巡课记录已存入系统！');
     closeRoomDetail();
-    
   } catch (error) {
-    // 💡 这里的打印非常重要，能看到后端具体的报错字段
-    console.error("❌ 提交失败详细信息:", error.response?.data);
-    const errorMsg = error.response?.data?.error || '服务器拒绝请求(400)';
-    alert(`保存失败：${errorMsg}`);
+    alert(`保存失败：${error.response?.data?.error || '服务器异常'}`);
   }
 };
 
@@ -373,7 +340,6 @@ onMounted(() => fetchMonitorData());
 </script>
 
 <style scoped>
-/* 基础布局 */
 .monitor-container { padding: 20px; background-color: #f0f2f5; min-height: 100vh; font-family: sans-serif; }
 .tool-bar { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 16px 24px; border-radius: 8px; margin-bottom: 24px; }
 .highlight-count { color: #409eff; font-size: 1.4rem; }
@@ -381,7 +347,6 @@ onMounted(() => fetchMonitorData());
 .search-input { width: 100%; padding: 10px 15px; border: 1px solid #dcdfe6; border-radius: 20px; outline: none; background: #f5f7fa; }
 .refresh-btn { padding: 10px 20px; background: #409eff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-/* 视频格子 */
 .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; }
 .video-card { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; }
 .video-card:hover { transform: translateY(-5px); }
@@ -393,24 +358,10 @@ onMounted(() => fetchMonitorData());
 .card-footer { padding: 15px; background: #fff; }
 .course-info { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
 
-/* 弹窗样式 */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.modal-content { 
-  width: 95%;          /* 💡 宽度占屏幕的 95% */
-  max-width: 1600px;   /* 💡 最大宽度放宽到 1600px */
-  height: 90vh;        /* 💡 新增：让整个黑框高度占屏幕的 90% */
-  background: #1e1e1e; 
-  border-radius: 12px; 
-  display: flex; 
-  flex-direction: column; 
-  overflow: hidden; 
-}
+.modal-content { width: 95%; max-width: 1600px; height: 90vh; background: #1e1e1e; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
 .modal-header { padding: 15px 20px; background: #141414; display: flex; justify-content: space-between; color: #fff; }
-.modal-main-layout { 
-  display: flex; 
-  flex: 1;             /* 💡 核心：让内容区域自动填满弹窗剩下的所有高度 */
-  /* height: 60vh; 删除这行固定高度！ */
-}
+.modal-main-layout { display: flex; flex: 1; }
 .modal-left { flex: 7; background: #000; display: flex; flex-direction: column; }
 .modal-video-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
 .modal-media { width: 100%; height: 100%; object-fit: contain; }
@@ -423,7 +374,6 @@ onMounted(() => fetchMonitorData());
 .p-tab.active { color: #409eff; border-bottom: 2px solid #409eff; background: #2d2d2d; }
 .panel-content { flex: 1; padding: 20px; overflow-y: auto; color: #ccc; }
 
-/* AI/考勤 内部组件 */
 .panel-title { border-left: 4px solid #409eff; padding-left: 10px; margin-bottom: 20px; color: #fff; }
 .attendance-ring { text-align: center; margin: 20px 0; }
 .rate { font-size: 2.5rem; font-weight: bold; display: block; }
@@ -451,38 +401,14 @@ onMounted(() => fetchMonitorData());
 .eval-tag.selected { background: #409eff; color: #fff; }
 textarea { width: 100%; background: #141414; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 4px; outline: none; }
 
-/* 考勤加载圆圈 */
 .lds-ring { display: inline-block; width: 40px; height: 40px; border: 4px solid #67c23a; border-radius: 50%; border-top-color: transparent; animation: spin 1s infinite linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .fade-in { animation: fadeIn 0.4s; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-/* 离线状态右侧面板样式 */
-.offline-panel-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #909399;
-  text-align: center;
-  padding: 20px;
-}
-.offline-panel-right .offline-icon-large {
-  font-size: 3rem;
-  margin-bottom: 15px;
-  opacity: 0.5;
-}
-.offline-panel-right h3 {
-  color: #fff;
-  margin-bottom: 10px;
-  font-weight: normal;
-}
-.offline-panel-right p {
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-
+.offline-panel-right { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #909399; text-align: center; padding: 20px; }
+.offline-panel-right .offline-icon-large { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+.offline-panel-right h3 { color: #fff; margin-bottom: 10px; font-weight: normal; }
+.offline-panel-right p { font-size: 0.9rem; line-height: 1.5; }
 </style>

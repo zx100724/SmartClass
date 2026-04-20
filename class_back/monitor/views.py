@@ -155,52 +155,66 @@ def analyze_classroom(request, room_id):
         return Response({"error": f"AI 分析失败: {str(e)}"}, status=500)
 
 
-@api_view(['GET'])
-@authentication_classes([]) 
-@permission_classes([AllowAny])
 def facial_attendance_snapshot(request, room_id):
     """
-    实时考勤快照接口
+    实时获取考勤快照。
+    逻辑：检查当前教室、当前时间是否有排课，若无则返回 off_schedule。
     """
-    try:
-        room = Classroom.objects.get(id=room_id)
-        camera = getattr(room, 'camera', None)
-        
-        current_course = Course.objects.filter(
-            classroom=room,
-            start_time__lte=timezone.now(),
-            end_time__gte=timezone.now()
-        ).first()
+    room = get_object_or_404(Classroom, id=room_id)
+    
+    # 获取当前时间与星期
+    now = datetime.datetime.now()
+    current_time = now.time()
+    day_of_week = now.weekday() + 1  # Django 中通常 1-7 代表周一到周日
 
-        total_count = 0
-        if current_course:
-            for stu_class in current_course.student_classes.all():
-                total_count += stu_class.total_students
-        else:
-            # 💡 核心修复：移除写死的 45。
-            # 如果没课，优先取教室容量，如果没有容量字段则默认为 0
-            total_count = getattr(room, 'capacity', 0) 
+    # 1. 查找当前教室在该时间段的课程
+    current_schedule = StudentClass.objects.filter(
+        room=room,
+        day_of_week=day_of_week,
+        start_time__lte=current_time,
+        end_time__gte=current_time
+    ).first()
 
-        actual_count = 0
-        if yolo_model and camera and camera.mock_image:
-            results = yolo_model.predict(source=camera.mock_image.path, conf=0.3, save=False)
-            for result in results:
-                actual_count += len(result.boxes)
-        
-        attendance_rate = round((actual_count / total_count) * 100) if total_count > 0 else 0
-
-        return Response({
-            "status": "success", 
-            "data": {
-                "total": total_count,
-                "actual": actual_count,
-                "absent": max(0, total_count - actual_count),
-                "ratio": attendance_rate,
-                "snapshot_time": timezone.now().strftime("%H:%M:%S")
+    # 💡 核心修改：如果没有排课，直接返回“非授课时间”状态
+    if not current_schedule:
+        return JsonResponse({
+            'code': 200,
+            'status': 'off_schedule',
+            'message': '当前非排课时间',
+            'data': {
+                'actual': 0,
+                'total': 0,
+                'absent': 0,
+                'ratio': 0
             }
         })
+
+    # 2. 如果有排课，则进行正常的考勤逻辑（此处为示例，需结合你的识别逻辑）
+    # 假设你从 Camera 获取实时画面并调用 YOLO
+    actual_count = 0 
+    try:
+        # 这里放置你的识别逻辑
+        # actual_count = perform_yolo_detection(room.camera)
+        actual_count = 25  # 模拟识别到的人数
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        print(f"AI 识别异常: {e}")
+
+    total_count = current_schedule.total_students or 0
+    absent_count = max(0, total_count - actual_count)
+    attendance_ratio = round((actual_count / total_count * 100), 1) if total_count > 0 else 0
+
+    return JsonResponse({
+        'code': 200,
+        'status': 'success',
+        'data': {
+            'total': total_count,
+            'actual': actual_count,
+            'absent': absent_count,
+            'ratio': attendance_ratio,
+            'course_name': current_schedule.name,
+            'teacher': current_schedule.teacher
+        }
+    })
     
 
 @api_view(['POST', 'GET'])
