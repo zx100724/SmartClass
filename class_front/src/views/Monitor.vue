@@ -264,7 +264,7 @@ const onlineClassrooms = computed(() => {
 
 const fetchMonitorData = async () => {
   try {
-    const response = await axios.get('http://192.168.226.117:8000/api/monitor/list/', { headers: getHeaders() });
+    const response = await axios.get('http://localhost:8000/api/monitor/list/', { headers: getHeaders() });
     roomList.value = response.data.data || response.data;
   } catch (error) {
     if (error.response?.status === 401) router.push('/login');
@@ -276,7 +276,7 @@ const triggerFacialAttendance = async () => {
   if (!selectedRoom.value) return;
   attendanceLoading.value = true;
   try {
-    const response = await axios.get(`http://192.168.226.117:8000/api/monitor/facial-attendance/${selectedRoom.value.id}/`);
+    const response = await axios.get(`http://localhost:8000/api/monitor/facial-attendance/${selectedRoom.value.id}/`);
     attendanceData.value = response.data.data;
   } catch (error) { console.error(error); } 
   finally { attendanceLoading.value = false; }
@@ -287,7 +287,7 @@ const triggerAiAnalysis = async () => {
   if (!selectedRoom.value) return;
   aiLoading.value = true;
   try {
-    const response = await axios.get(`http://192.168.226.117:8000/api/monitor/ai-analyze/${selectedRoom.value.id}/`);
+    const response = await axios.get(`http://localhost:8000/api/monitor/ai-analyze/${selectedRoom.value.id}/`);
     aiData.value = response.data.data;
   } catch (error) { console.error(error); }
   finally { aiLoading.value = false; }
@@ -344,7 +344,7 @@ const submitEvaluation = async () => {
     const headers = getHeaders();
     console.log("🔑 当前请求头:", headers);
 
-    await axios.post('http://192.168.226.117:8000/api/records/manage/', payload, {
+    await axios.post('http://localhost:8000/api/records/manage/', payload, {
       headers: headers
     });
     

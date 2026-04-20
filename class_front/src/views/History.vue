@@ -104,7 +104,7 @@ const fetchHistory = async () => {
   const token = localStorage.getItem('token') 
   
   try {
-    const res = await axios.get('http://192.168.226.117:8000/api/records/history/', {
+    const res = await axios.get('http://localhost:8000/api/records/history/', {
       headers: { 'Authorization': `Bearer ${token}` },
       // 💡 只有这里有改动：将 keyword 发给后端
       params: { keyword: searchQuery.value.trim() } 
@@ -148,7 +148,7 @@ const handleDelete = (id) => {
   ).then(async () => {
     const token = localStorage.getItem('token')
     try {
-      await axios.delete(`http://192.168.226.117:8000/api/records/history/${id}/`, {
+      await axios.delete(`http://localhost:8000/api/records/history/${id}/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       ElMessage.success('记录已成功删除')

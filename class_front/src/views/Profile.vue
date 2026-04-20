@@ -76,7 +76,7 @@ const fetchUserInfo = async () => {
   try {
     const token = localStorage.getItem('token')
     if (!token) return router.push('/login')
-    const res = await axios.get('http://192.168.226.117:8000/api/user-info/', {
+    const res = await axios.get('http://localhost:8000/api/user-info/', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     userInfo.username = res.data.username
@@ -99,7 +99,7 @@ const saveProfile = async () => {
   saving.value = true
   try {
     const token = localStorage.getItem('token')
-    await axios.post('http://192.168.226.117:8000/api/update-profile/', 
+    await axios.post('http://localhost:8000/api/update-profile/', 
       { 
         email: userInfo.email,
         real_name: userInfo.real_name 
@@ -127,7 +127,7 @@ const handlePasswordChange = async () => {
   }
   try {
     const token = localStorage.getItem('token')
-    await axios.post('http://192.168.226.117:8000/api/change-password/', {
+    await axios.post('http://localhost:8000/api/change-password/', {
       new_password: passwordForm.newPassword
     }, { headers: { 'Authorization': `Bearer ${token}` } })
     

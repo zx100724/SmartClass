@@ -129,7 +129,7 @@ const initCharts = (data) => {
 // 获取数据并刷新看板
 const fetchData = async () => {
   try {
-    const res = await axios.get('http://192.168.226.117:8000/api/records/dashboard/')
+    const res = await axios.get('http://localhost:8000/api/records/dashboard/')
     stats.value = res.data.metrics
     await nextTick()
     initCharts(res.data)

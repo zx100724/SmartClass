@@ -96,7 +96,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'class_db',           # 数据库名 (请确保你在 MySQL 中已手动创建它)
         'USER': 'root',               # 数据库用户名
-        'PASSWORD': '12345678',        # 数据库密码
+        'PASSWORD': '123456',        # 数据库密码
         'HOST': 'localhost',           # 或者你的数据库 IP
         'PORT': '3306',               # 默认端口
         'OPTIONS': {
