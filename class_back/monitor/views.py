@@ -5,9 +5,12 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse  # 💡 添加这一行
+import datetime  # 💡 添加这一行
 
 # 💡 注意：确保你本地的 models.py 中有 InspectionRecord，如果没有请从这里删掉
-from .models import Classroom, Course, Camera, InspectionRecord 
+from .models import Classroom, Course, Camera, StudentClass,InspectionRecord 
 
 # ==========================================
 # 1. 全局加载 YOLO 模型 (避免每次请求都重新加载)
@@ -108,7 +111,7 @@ def analyze_classroom(request, room_id):
         action_counts = {name: 0 for name in class_names.values()}
 
         if yolo_model and os.path.exists(image_path):
-            results = yolo_model.predict(source=image_path, conf=0.5, save=False)
+            results = yolo_model.predict(source=image_path, conf=0.25, save=False)
             
             for result in results:
                 boxes = result.boxes
@@ -155,54 +158,69 @@ def analyze_classroom(request, room_id):
         return Response({"error": f"AI 分析失败: {str(e)}"}, status=500)
 
 
+@api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def facial_attendance_snapshot(request, room_id):
     """
-    实时获取考勤快照。
-    逻辑：检查当前教室、当前时间是否有排课，若无则返回 off_schedule。
+    实时获取考勤快照
     """
     room = get_object_or_404(Classroom, id=room_id)
-    
-    # 获取当前时间与星期
-    now = datetime.datetime.now()
-    current_time = now.time()
-    day_of_week = now.weekday() + 1  # Django 中通常 1-7 代表周一到周日
+    now = timezone.now()
 
-    # 1. 查找当前教室在该时间段的课程
-    current_schedule = StudentClass.objects.filter(
-        room=room,
-        day_of_week=day_of_week,
-        start_time__lte=current_time,
-        end_time__gte=current_time
+    # 1. 查找当前课程
+    current_course = Course.objects.filter(
+        classroom=room,
+        start_time__lte=now,
+        end_time__gte=now
     ).first()
 
-    # 💡 核心修改：如果没有排课，直接返回“非授课时间”状态
-    if not current_schedule:
+    if not current_course:
         return JsonResponse({
             'code': 200,
             'status': 'off_schedule',
             'message': '当前非排课时间',
-            'data': {
-                'actual': 0,
-                'total': 0,
-                'absent': 0,
-                'ratio': 0
-            }
+            'data': {'actual': 0, 'total': 0, 'absent': 0, 'ratio': 0}
         })
 
-    # 2. 如果有排课，则进行正常的考勤逻辑（此处为示例，需结合你的识别逻辑）
-    # 假设你从 Camera 获取实时画面并调用 YOLO
-    actual_count = 0 
-    try:
-        # 这里放置你的识别逻辑
-        # actual_count = perform_yolo_detection(room.camera)
-        actual_count = 25  # 模拟识别到的人数
-    except Exception as e:
-        print(f"AI 识别异常: {e}")
+    # 2. 检查摄像头
+    camera = getattr(room, 'camera', None)
+    if not camera or not camera.status or not camera.mock_image:
+        return JsonResponse({
+            'code': 200,
+            'status': 'offline',
+            'message': '设备离线或无画面',
+            'data': {'actual': 0, 'total': 0, 'absent': 0, 'ratio': 0}
+        })
 
-    total_count = current_schedule.total_students or 0
+    # 3. 调用 YOLO 统计真实人数
+    actual_count = 0
+    try:
+        if yolo_model and os.path.exists(camera.mock_image.path):
+            results = yolo_model.predict(source=camera.mock_image.path, conf=0.25, save=False)
+            
+            # 💡 只要是学生的动作（0到6），全部加起来
+            student_action_ids = [0, 1, 2, 3, 4, 5, 6] 
+            
+            for result in results:
+                for box in result.boxes:
+                    if int(box.cls[0].item()) in student_action_ids:
+                        actual_count += 1
+            
+            print(f"📸 考勤抓拍成功！画面中真实识别人数为: {actual_count}")
+        else:
+            print("⚠️ 考勤抓拍失败：模型未加载或图片不存在")
+            actual_count = 0 
+    except Exception as e:
+        print(f"考勤 AI 识别异常: {e}")
+        actual_count = 0
+
+    # 4. 计算结果并返回 (刚才可能就是不小心把这部分弄丢了！)
+    total_count = sum(cls.total_students for cls in current_course.student_classes.all())
     absent_count = max(0, total_count - actual_count)
     attendance_ratio = round((actual_count / total_count * 100), 1) if total_count > 0 else 0
 
+    # 💡 这个 return 至关重要，它把计算结果打包发给 Vue 前端
     return JsonResponse({
         'code': 200,
         'status': 'success',
@@ -211,8 +229,8 @@ def facial_attendance_snapshot(request, room_id):
             'actual': actual_count,
             'absent': absent_count,
             'ratio': attendance_ratio,
-            'course_name': current_schedule.name,
-            'teacher': current_schedule.teacher
+            'course_name': current_course.course_name,
+            'teacher': current_course.teacher_name
         }
     })
     
